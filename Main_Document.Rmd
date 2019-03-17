@@ -28,7 +28,10 @@ trim_ties = function(ties){
   # I am still working on this. Need to decide what variables to take.
   ties
 }
+```
 
+
+```{r "Merge", include=FALSE}
 # trim both the TIES and GWF data.
 gwf = trim_gwf(gwf)
 ties = trim_ties(ties)
@@ -36,7 +39,6 @@ data = ties %>% left_join(gwf, by = 'targetstate')
 ```
 
 # Introduction
-
 Economic sanctions are widely used in foreign policy. In some cases, politicians impose sanctions simply to retaliate or signal disagreements, as in Turkey’s blockade against Armenia since the Nagorno-Karabakh conflict or the United States’ 1951 Trade Agreements Act that put the Soviet bloc outside of its Reciprocal Trade Program [@schelling1958,489-490]. In other cases, politicians use sanctions to gain influence not through outright imposition, but through threats to impose them unless targets meet their demands. When the U.S. threatened Russia with sanctions unless it stopped supporting separatists in Ukraine in 2014, it sought to influence Russian policy by making it potentially too costly. If the economic cost of a potential sanction is perceived to entail high political cost on the leadership, the target leader will have an incentive to avoid it by conceding [@hirschman1945,17]. 
 
 How much a sanction’s economic costs translate into political costs is a function of a target’s domestic political institutions. Since a democratic society suffering under sanctions is in a better position to punish its leader or remove her or him from office, previous research suggests that sanctions in general “work” better against democracies [@brooks2002, 1; @marinov2005,572-573; @lektzian2007,849]. If that is correct, then politicians' sanction practices are puzzling: almost all active U.S. sanctions target autocratic regimes.^[ Here, I am referring to active U.S. sanction impositions. For how many sanctions threats are issued globally against different types of regimes, see Figure 1.] If these targets are less likely to concede, sanctions might not be the best available investment of time and resources for politicians to achieve their foreign policy goals.
@@ -89,14 +91,22 @@ While the main theoretical focus is the domestic political institution of the ta
 
 An empirical test of the hypotheses requires data on past sanction episodes, target regime type, economic sanctions threats, and outcomes at threat stage. The Threat and Imposition of Sanctions (TIES) dataset developed by Morgan, Bapat, Krustev, and Kobayashi (2014) provides this. I use TIES’s data on sanction episodes from 1945 to 2005 and merge it with Barbara Geddes, Joseph Wright, and Erica Frantz’s data on autocratic regimes (GWF), which contains country-year information of every country’s regime type in a given year from 1946 to 2010 in independent countries with more than one million inhabitants (Geddes et al 2014: 317). The visualization of the distribution of target regimes types over years is shown in Figure 1.
 
-```{r "Figure1"}
-1+1
-```
-
-
 In TIES, a sanction is defined as “actions that one or more countries take to limit or end their economic relations with a target country in an effort to persuade that country to change one or more of its policies.” Coders code a sanction episode as begun “when the sender either makes a threat about the possibility of sanctions or imposes sanctions with no previous threat.” Since the theoretical focus here is to explain targets’ responses to sanctions threats, cases in which sanctions are imposed without being threatened are dropped. In TIES, sanctions threats also vary by the specificity, types and, actor. Some are verbal statements by government officials or draft legislation. Others are passages of conditional laws stipulating that sanctions will be imposed if certain target behaviors are not changed. While in some cases primary senders are international organizations in the TIES dataset, this paper limits its cases to those both the senders and targets are sovereign states in order to take sender-target trade dependence into consideration.
 
 **Figure 1: Target Regime Type and Sanctions threats, 1945-2005**
+
+```{r "Figure 1", echo=FALSE}
+graph_data <- data %>% 
+  group_by(startyear) %>%
+  count(gwf_regimetype)
+
+# head(graph_data)
+
+graph_data %>% 
+  filter(gwf_regimetype != 'NA') %>% 
+  ggplot()+ geom_line(aes(x=startyear,y=n,linetype=gwf_regimetype)) + 
+  theme_bw()
+```
 
 ## Dependent Variable
 
