@@ -17,3 +17,4 @@ replace endyear = 2004 if caseid == 2002041106 /* endyear 2002->2004*/
 replace targetstate = 490 if caseid == 2002041103 /* target missing */
 
 export delimited TIESv4.csv
+clear all
