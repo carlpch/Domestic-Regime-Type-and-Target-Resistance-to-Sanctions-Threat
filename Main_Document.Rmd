@@ -7,6 +7,8 @@ link-citations: true
 ```{r "Setup", include=FALSE}
 require(tidyverse) # for data manipulation
 require(haven) # for reading STATA files
+require(forcats) # categorical variable
+
 ties = read_csv('_data/TIESv4.csv')
 gwf = read_dta('_data/GWF_AllPoliticalRegimes.dta')
 
@@ -93,19 +95,26 @@ An empirical test of the hypotheses requires data on past sanction episodes, tar
 
 In TIES, a sanction is defined as “actions that one or more countries take to limit or end their economic relations with a target country in an effort to persuade that country to change one or more of its policies.” Coders code a sanction episode as begun “when the sender either makes a threat about the possibility of sanctions or imposes sanctions with no previous threat.” Since the theoretical focus here is to explain targets’ responses to sanctions threats, cases in which sanctions are imposed without being threatened are dropped. In TIES, sanctions threats also vary by the specificity, types and, actor. Some are verbal statements by government officials or draft legislation. Others are passages of conditional laws stipulating that sanctions will be imposed if certain target behaviors are not changed. While in some cases primary senders are international organizations in the TIES dataset, this paper limits its cases to those both the senders and targets are sovereign states in order to take sender-target trade dependence into consideration.
 
-**Figure 1: Target Regime Type and Sanctions threats, 1945-2005**
 
-```{r "Figure 1", echo=FALSE}
+
+```{r "Figure 1", echo=FALSE, fig.cap="Target Regime Type and Sanctions threats, 1945-2005"}
 graph_data <- data %>% 
   group_by(startyear) %>%
   count(gwf_regimetype)
 
 # head(graph_data)
+exclude_regime <- c('provisional', 'foreign-occupied', 'warlord', 'warlord/foreign-occupied',
+                    'not-independent')
+xscale <- seq(1950, 2000, 10)
 
 graph_data %>% 
   filter(gwf_regimetype != 'NA') %>% 
-  ggplot()+ geom_line(aes(x=startyear,y=n,linetype=gwf_regimetype)) + 
-  theme_bw()
+  filter(gwf_regimetype %in% exclude_regime == FALSE) %>% 
+  ggplot()+ geom_line(aes(x=startyear,y=n,linetype=fct_reorder(gwf_regimetype,n*(-1)))) + 
+  xlab('Year') + ylab('Sanctions Threats') +
+  scale_linetype(name='Regime Type')+
+  scale_x_continuous(breaks = xscale, labels=xscale)+
+  theme_bw(base_family='Times')
 ```
 
 ## Dependent Variable
