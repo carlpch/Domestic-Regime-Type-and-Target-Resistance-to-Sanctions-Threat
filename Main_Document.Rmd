@@ -5,9 +5,35 @@ bibliography: Main_Document.bib
 link-citations: true 
 ---
 ```{r "Setup", include=FALSE}
-require(tidyverse)
-```
+require(tidyverse) # for data manipulation
+require(haven) # for reading STATA files
+ties = read_csv('_data/TIESv4.csv')
+gwf = read_dta('_data/GWF_AllPoliticalRegimes.dta')
 
+trim_gwf = function(gwf){
+  # Take the original GWF dataset, and retrieve only two things:
+  # (1) the cowcode of a country (targetstate, to be merged with TIES)
+  # (2) the regime type of the targetstate.
+  # I use an ifelse() statement becauese autocracies and non-autocracies have their 
+  # regime type separated into two different variables.
+  gwf <- gwf %>% 
+    mutate(gwf_regimetype = ifelse(gwf_regimetype!='NA',gwf_regimetype, gwf_nonautocracy)) %>%
+    # targetstate needs to be integer to merge with TIES
+    mutate(targetstate = as.integer(cowcode)) %>% 
+    select(targetstate, gwf_regimetype) 
+  gwf
+}
+
+trim_ties = function(ties){
+  # I am still working on this. Need to decide what variables to take.
+  ties
+}
+
+# trim both the TIES and GWF data.
+gwf = trim_gwf(gwf)
+ties = trim_ties(ties)
+data = ties %>% left_join(gwf, by = 'targetstate')
+```
 
 # Introduction
 
