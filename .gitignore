@@ -5,3 +5,5 @@
 *.html
 *.pdf
 !manuscript.pdf
+.Rproj.user
+_data/GWF\ Autocratic\ Regimes\ 1.2/

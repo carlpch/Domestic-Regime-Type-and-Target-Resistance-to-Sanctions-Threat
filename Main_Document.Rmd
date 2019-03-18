@@ -1,21 +1,93 @@
 ---
 output: pdf_document
+fontsize: 12pt
 bibliography: Main_Document.bib
 link-citations: true 
 ---
-# Introduction
+```{r "Setup", include=FALSE}
+require(tidyverse) # for data manipulation
+require(haven) # for reading STATA files
+require(forcats) # categorical variable
+require(carlpch) # for rownonmiss
 
-Economic sanctions are widely used in foreign policy. In some cases, politicians impose sanctions simply to retaliate or signal disagreements, as in Turkey’s blockade against Armenia since the Nagorno-Karabakh conflict or the United States’ 1951 Trade Agreements Act that put the Soviet bloc outside of its Reciprocal Trade Program [@schelling1958,489-490]. In other cases, politicians use sanctions to gain influence not through outright imposition, but through threats to impose them unless targets meet their demands. When the U.S. threatened Russia with sanctions unless it stopped supporting separatists in Ukraine in 2014, it sought to influence Russian policy by making it potentially too costly. If the economic cost of a potential sanction is perceived to entail high political cost on the leadership, the target leader will have an incentive to avoid it by conceding [@hirschman1945,17]. 
+ties = read_csv('_data/TIESv4.csv')
+gwf = read_dta('_data/GWF_AllPoliticalRegimes.dta')
+
+
+trim_gwf = function(gwf){
+  # Take the original GWF dataset, and retrieve only two things:
+  # (1) the cowcode of a country (targetstate, to be merged with TIES)
+  # (2) the regime type of the targetstate.
+  # I use an ifelse() statement becauese autocracies and non-autocracies have their 
+  # regime type separated into two different variables.
+  gwf <- gwf %>% 
+    mutate(gwf_regimetype = ifelse(gwf_regimetype!='NA',gwf_regimetype, gwf_nonautocracy)) %>%
+    # targetstate needs to be integer to merge with TIES
+    mutate(targetstate = as.integer(cowcode)) %>% 
+    select(targetstate, gwf_regimetype) 
+  gwf
+}
+
+trim_ties = function(ties){
+  # I am still working on this. Need to decide what variables to take.
+  ties
+}
+
+trim_weeks = function(weeks){
+  # Take Week's raw personalist data (from Geddes), then follow Week's command in STATA:
+
+  # ---- start of STATA code ---
+  #  * generate personalist index
+  #    egen perssum=rsum(appt_pers rubber_pers succ_pers office_pers hier_pers diss_pers sec_per off_per)
+  #    egen float perstotal = rownonmiss(appt_pers rubber_pers succ_pers office_pers hi er_pers diss_pers sec_per off_per)
+  #    gen persrat=perssum/perstotal
+	#  * set persrat to missing if there are answers on fewer than half the questions
+  #    replace persrat=. if perstotal<4
+	#    set persrat to missing for democracies
+  #    replace persrat=. if democracy==1
+  # ---- end of STATA code ---
+
+  weeks = read_dta('_data/weeks_raw_full_public.dta')
+  weeks$pers_total <- rownonmiss(select(weeks,ends_with('_pers')))
+  weeks$pers_sum <- NA
+  weeks$pers_rat <- NA
+  for(i in 1:nrow(weeks)){
+    weeks$pers_sum[i] = sum(weeks$appt_pers[i],weeks$rubber_pers[i],
+                            weeks$succ_pers[i],weeks$office_pers[i],
+                            weeks$hier_pers[i],weeks$diss_pers[i],
+                            weeks$sec_pers[i],weeks$off_pers[i], na.rm = TRUE)
+  if (weeks$pers_total[i] ==0) {
+    weeks$pers_rat[i] <- NA
+  } else {
+    weeks$pers_rat[i] <- weeks$pers_sum[i]/weeks$pers_total[i]
+    }
+  }
+  return(weeks)
+}
+
+```
+
+
+```{r "Merge", include=FALSE}
+# trim both the TIES and GWF data.
+gwf = trim_gwf(gwf)
+ties = trim_ties(ties)
+weeks = trim_weeks(weeks)
+data = ties %>% left_join(gwf, by = 'targetstate')
+```
+
+
+=======
+# Introduction
+Economic sanctions are widely used in foreign policy. In some cases, politicians impose sanctions simply to retaliate or signal disagreements, as in Turkey’s blockade against Armenia since the Nagorno-Karabakh conflict or the United States’ 1951 Trade Agreements Act that put the Soviet bloc outside of its Reciprocal Trade Program [@schelling1958,489-490]. In other cases, politicians use sanctions to gain influence not through outright imposition, but through threats to impose them unless targets meet their demands. When the U.S. threatened Russia with sanctions unless it stopped supporting separatists in Ukraine in 2014, it sought to influence Russian policy by making it potentially too costly. If the economic cost of a potential sanction is perceived to entail high political cost on the leadership, the target leader will have an incentive to avoid it by conceding [@hirschman1945,17].
 
 How much a sanction’s economic costs translate into political costs is a function of a target’s domestic political institutions. Since a democratic society suffering under sanctions is in a better position to punish its leader or remove her or him from office, previous research suggests that sanctions in general “work” better against democracies [@brooks2002, 1; @marinov2005,572-573; @lektzian2007,849]. If that is correct, then politicians' sanction practices are puzzling: almost all active U.S. sanctions target autocratic regimes.^[ Here, I am referring to active U.S. sanction impositions. For how many sanctions threats are issued globally against different types of regimes, see Figure 1.] If these targets are less likely to concede, sanctions might not be the best available investment of time and resources for politicians to achieve their foreign policy goals.
 
-
 I argue that the solution to this puzzle lies in the fact that not all autocracies are equally resilient to sanctions threats. Specifically, personalist” regimes are resilient, and other non-democratic regimes under military or single-party rules respond to sanctions threats in ways that are more similar to their democratic counterparts. In other words, institutionalized autocracies produce constituencies that can pressure leaders to avoid economic hardship. Because a target can always avoid sanctions imposition by conceding to sender’s demand, studying sanctions threats also alleviate the challenge of selection effect. To paraphrase Schelling, as sanctions can be “most purposive and most successful when it is threatened and not used” [-@schelling2008,10], we might never observe the sanctions responsible for a target’s change in policy [@bueno2012 ,174; @nooruddin2002,60; @smith1995,241] if we only study sanction impositions.
 
-Drawing on a dataset of all threatened sanctions from 1945 to 2005,^[This is a time frame that data on sanctions threats and autocratic regime types are both available. The Threat and Imposition of Sanctions (TIES) dataset covers all sanction episodes from 1945 to 2005. The GWF Autocratic Regimes dataset has country years from 1962 to 2010.] I develop a “domestic audience” account to explain personalist targets’ resistance to sanctions threats. After taking potential confounding factors into consideration, targets are less likely to make policy concessions at threat stage compared to other regime types. The higher a target’s personalism score, the less likely it will concede. The results also hold when modeling target regime type in three categories: personalist, non-personalist, and democratic targets. While other scholars find sanction imposition to be more destabilizing on personalist targets (Escribà-Folch and Wright 2010: 334), this paper demonstrates empirically that the effectiveness of sanctions at imposition stage might not translate into useful threats: since personalist leaders has a smaller domestic audience size, they face little domestic punishment for policy failures, they can afford to stand firm against a sender which may or may not have the resolve to carry out its threat. Even if sanction imposition can increase their risks of being violently removed from power, this does not affect their threat stage calculus because the probability of successful elite coordination to is extremely low while the risk of being forcibly removed from office given a successful coordination is already high for these leaders. Moreover, the domestic political structure in personalist states also tends to select individuals who took “great risks to pursue power and were also lucky enough to survive” (Weeks 2014: 31). Even when facing foreign threats with potentially dire consequence, these leaders are expected to be risk-acceptant and demonstrate high resilience. With respect to foreign policy, this implies that personalist leaders can be relatively immune at threat stage. Therefore, using sanctions threats to leverage personalist targets could be a waste of time even if the same policy might work on democratic and non-personalist autocracies.
+Drawing on a dataset of all threatened sanctions from 1945 to 2005,^[This is a time frame that data on sanctions threats and autocratic regime types are both available. The Threat and Imposition of Sanctions (TIES) dataset covers all sanction episodes from 1945 to 2005. The GWF Autocratic Regimes dataset has country years from 1962 to 2010.] I develop a “domestic audience” account to explain personalist targets’ resistance to sanctions threats. After taking potential confounding factors into consideration, targets are less likely to make policy concessions at threat stage compared to other regime types. The higher a target’s personalism score, the less likely it will concede. The results also hold when modeling target regime type in three categories: personalist, non-personalist, and democratic targets. While other scholars find sanction imposition to be more destabilizing on personalist targets (Escribà-Folch and Wright 2010: 334), this paper demonstrates empirically that the effectiveness of sanctions at imposition stage might not translate into useful threats: since personalist leaders has a smaller domestic audience size, they face little domestic punishment for policy failures, they can afford to stand firm against a sender which may or may not have the resolve to carry out its threat. Even if sanction imposition can increase their risks of being violently removed from power, this does not affect their threat stage calculus because the probability of successful elite coordination to is extremely low while the risk of being forcibly removed from office given a successful coordination is already high for these leaders. Moreover, the domestic political structure in personalist states also tends to select individuals who took “great risks to pursue power and were also lucky enough to survive” [@weeks2014,31]. Even when facing foreign threats with potentially dire consequence, these leaders are expected to be risk-acceptant and demonstrate high resilience. With respect to foreign policy, this implies that personalist leaders can be relatively immune at threat stage. Therefore, using sanctions threats to leverage personalist targets could be a waste of time even if the same policy might work on democratic and non-personalist autocracies.
 
 # Searching for A Sanction Effect
-
 Situated between “words and war” (Marinov 2005: 565), sanctions are popular among politicians as they allow senders to coerce targets without resorting to military force. While the sanctions literature is extensive, one challenge for policy-makers is the multiple dimensionalities of sanction’s effectiveness. Some focus on sanctions’ merits as an alternative to use of force (Pape 1997: 90), others identify “circumstances in which economic sanctions can succeed” (Hufbauer et al 1990: 1), still others evaluate sanctions’ intended and unintended consequences, such as target regime change (Marinov 2005: 572-573) or human rights oppression following imposition (Drury and Peksen 2014: 463). In this article, I focus on the effect of “threatened” sanctions on a target’s policy behavior and bring clarity to the puzzle: what contributes to a target’s resistance against sanctions threats?  Are there systematic factors that allowed Russia to stand firm against sanctions threat in 2014, but not Guatemala in 1987? This setting allows me to address the common use of sanctions as a tool of foreign policy “compellence.”
 
 Although the idea of explaining target resistance is not new, previous research tends to distinguish regime type only in “democratic” and “autocratic” black boxes, hence leaving the institutional variations among non-democracies unaddressed. In more recent studies, researchers show that not all autocracies are alike in their foreign policy behavior (for example, Weeks 2008: 44-49; Weiss 2014: 16-27). Especially important was Escribà-Folch and Wright’s (2010: 348-350) finding that once sanctions are imposed, leaders of personalist autocracies are more likely to be removed from power compared to leaders of other non-democracies. 
@@ -59,7 +131,27 @@ An empirical test of the hypotheses requires data on past sanction episodes, tar
 
 In TIES, a sanction is defined as “actions that one or more countries take to limit or end their economic relations with a target country in an effort to persuade that country to change one or more of its policies.” Coders code a sanction episode as begun “when the sender either makes a threat about the possibility of sanctions or imposes sanctions with no previous threat.” Since the theoretical focus here is to explain targets’ responses to sanctions threats, cases in which sanctions are imposed without being threatened are dropped. In TIES, sanctions threats also vary by the specificity, types and, actor. Some are verbal statements by government officials or draft legislation. Others are passages of conditional laws stipulating that sanctions will be imposed if certain target behaviors are not changed. While in some cases primary senders are international organizations in the TIES dataset, this paper limits its cases to those both the senders and targets are sovereign states in order to take sender-target trade dependence into consideration.
 
-**Figure 1: Target Regime Type and Sanctions threats, 1945-2005**
+
+
+```{r "Figure 1", echo=FALSE, fig.cap="Target Regime Type and Sanctions threats, 1945-2005"}
+graph_data <- data %>% 
+  group_by(startyear) %>%
+  count(gwf_regimetype)
+
+# head(graph_data)
+exclude_regime <- c('provisional', 'foreign-occupied', 'warlord', 'warlord/foreign-occupied',
+                    'not-independent')
+xscale <- seq(1950, 2000, 10)
+
+graph_data %>% 
+  filter(gwf_regimetype != 'NA') %>% 
+  filter(gwf_regimetype %in% exclude_regime == FALSE) %>% 
+  ggplot()+ geom_line(aes(x=startyear,y=n,linetype=fct_reorder(gwf_regimetype,n*(-1)))) + 
+  xlab('Year') + ylab('Sanctions Threats') +
+  scale_linetype(name='Regime Type')+
+  scale_x_continuous(breaks = xscale, labels=xscale)+
+  theme_bw(base_family='Times')
+```
 
 ## Dependent Variable
 
@@ -104,6 +196,9 @@ Another spill-over effect that a sanction episode might create can occur when a 
 Sender regime – finally, drawing from the audience cost literature, a sender’s domestic political institution might signal important information about whether a threat is credible. Through the same logic of domestic audience presented earlier, since democracies have a larger domestic political audience, a given leader might find herself more vulnerable to the public’s ex-post punishment if she bluffed and hurt the country’s reputation. I use the same Geddes (1999, 2003) trichotomy for the sender to account for this potential effect.
 
 # Findings and discussion
+```{r "Analysis", include=FALSE}
+
+```
 
 Are personalist autocracies more resistant to sanctions threat after taking potential confounding factors into account and under a high trade-dependence setting? I use multinomial logistic regression as the estimation procedure and present the results in Table 1. To ensure that the results are not artifacts of how trade level is measured or how missing data are handled, five models with different operationalizations of target trade dependence a provided. Since the substantive effect size is harder to be interpreted from the coefficient table of generalized linear regressions with interaction terms, I also report the results visually based on predicted probability in Figure 2.
 
