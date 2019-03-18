@@ -8,10 +8,11 @@ link-citations: true
 require(tidyverse) # for data manipulation
 require(haven) # for reading STATA files
 require(forcats) # categorical variable
+require(carlpch) # for rownonmiss
 
 ties = read_csv('_data/TIESv4.csv')
 gwf = read_dta('_data/GWF_AllPoliticalRegimes.dta')
-weeks = read_dta('_data/weeks_raw_full_public.dta')
+
 
 trim_gwf = function(gwf){
   # Take the original GWF dataset, and retrieve only two things:
@@ -34,28 +35,34 @@ trim_ties = function(ties){
 
 trim_weeks = function(weeks){
   # Take Week's raw personalist data (from Geddes), then follow Week's command in STATA:
-  # 
+
   # ---- start of STATA code ---
   #  * generate personalist index
   #    egen perssum=rsum(appt_pers rubber_pers succ_pers office_pers hier_pers diss_pers sec_per off_per)
-  #    egen float perstotal = rownonmiss(appt_pers rubber_pers succ_pers office_pers hier_pers diss_pers sec_per off_per)
+  #    egen float perstotal = rownonmiss(appt_pers rubber_pers succ_pers office_pers hi er_pers diss_pers sec_per off_per)
   #    gen persrat=perssum/perstotal
 	#  * set persrat to missing if there are answers on fewer than half the questions
   #    replace persrat=. if perstotal<4
 	#    set persrat to missing for democracies
   #    replace persrat=. if democracy==1
   # ---- end of STATA code ---
-  #
-  pers_component = select(weeks, ends_with('_pers')) %>% # select all personalist variables
-    mutate_all(pers_component, funs(ifelse(is.na(.),0,.))) %>% # change NA to 0
-    mutate(pers_component, 
-           personalist_sum=appt_pers+rubber_pers+succ_pers+office_pers+hier_pers+diss_pers+sec_pers+off_pers)
-  
-  weeks <- weeks %>% 
-    mutate(personalist_sum = 
-             sum(.$appt_pers,.$rubber_pers,.$succ_pers,.$office_pers,.$hier_pers,.$diss_pers,.$sec_pers,.$off_pers, na.rm = TRUE)) #na.rm needs to be true to ignore NA instead of getting all NAs
-    # targetstate needs to be integer to merge with TIES
-  weeks
+
+  weeks = read_dta('_data/weeks_raw_full_public.dta')
+  weeks$pers_total <- rownonmiss(select(weeks,ends_with('_pers')))
+  weeks$pers_sum <- NA
+  weeks$pers_rat <- NA
+  for(i in 1:nrow(weeks)){
+    weeks$pers_sum[i] = sum(weeks$appt_pers[i],weeks$rubber_pers[i],
+                            weeks$succ_pers[i],weeks$office_pers[i],
+                            weeks$hier_pers[i],weeks$diss_pers[i],
+                            weeks$sec_pers[i],weeks$off_pers[i], na.rm = TRUE)
+  if (weeks$pers_total[i] ==0) {
+    weeks$pers_rat[i] <- NA
+  } else {
+    weeks$pers_rat[i] <- weeks$pers_sum[i]/weeks$pers_total[i]
+    }
+  }
+  return(weeks)
 }
 
 ```
@@ -65,6 +72,7 @@ trim_weeks = function(weeks){
 # trim both the TIES and GWF data.
 gwf = trim_gwf(gwf)
 ties = trim_ties(ties)
+weeks = trim_weeks(weeks)
 data = ties %>% left_join(gwf, by = 'targetstate')
 ```
 
