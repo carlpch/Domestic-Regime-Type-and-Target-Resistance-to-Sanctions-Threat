@@ -24,13 +24,14 @@ trim_gwf = function(gwf){
     mutate(gwf_regimetype = ifelse(gwf_regimetype!='NA',gwf_regimetype, gwf_nonautocracy)) %>%
     # targetstate needs to be integer to merge with TIES
     mutate(targetstate = as.integer(cowcode)) %>% 
-    select(targetstate, gwf_regimetype) 
+    select(targetstate,year,gwf_regimetype) 
   gwf
 }
 
 trim_ties = function(ties){
   # I am still working on this. Need to decide what variables to take.
-  ties
+  ties <- ties %>% select(year = startyear, everything())
+  return(ties)
 }
 
 trim_weeks = function(weeks){
@@ -56,14 +57,11 @@ trim_weeks = function(weeks){
                             weeks$succ_pers[i],weeks$office_pers[i],
                             weeks$hier_pers[i],weeks$diss_pers[i],
                             weeks$sec_pers[i],weeks$off_pers[i], na.rm = TRUE)
-  if (weeks$pers_total[i] ==0) {
-    weeks$pers_rat[i] <- NA
-  } else {
-    weeks$pers_rat[i] <- weeks$pers_sum[i]/weeks$pers_total[i]
-    }
-  }
-  
-  return(weeks %>% select(ccode,year,pers_total,pers_sum,pers_rat))
+  if (isTRUE(weeks$democracy[i]==1)){weeks$pers_rat[i] <- 0
+  } else if (weeks$pers_total[i] ==0) {weeks$pers_rat[i]<-NA
+  } else {weeks$pers_rat[i] <- weeks$pers_sum[i]/weeks$pers_total[i]}
+  } 
+  return(weeks %>% select(targetstate=ccode,year,pers_total,pers_sum,pers_rat))
 }
 
 ```
@@ -71,10 +69,12 @@ trim_weeks = function(weeks){
 
 ```{r "Merge", include=FALSE}
 # trim both the TIES and GWF data.
-gwf = trim_gwf(gwf)
-ties = trim_ties(ties)
-weeks = trim_weeks(weeks)
-data = ties %>% left_join(gwf, by = 'targetstate')
+gwf <- trim_gwf(gwf)
+ties <- trim_ties(ties)
+weeks <- trim_weeks(weeks)
+data <- ties %>% 
+  left_join(gwf, by = c('targetstate','year'))%>%
+  left_join(weeks, by = c('targetstate','year'))
 ```
 
 # Introduction
@@ -134,7 +134,7 @@ In TIES, a sanction is defined as “actions that one or more countries take to 
 
 ```{r "Figure 1", echo=FALSE, fig.cap="Target Regime Type and Sanctions threats, 1945-2005"}
 graph_data <- data %>% 
-  group_by(startyear) %>%
+  group_by(year) %>%
   count(gwf_regimetype)
 
 # head(graph_data)
@@ -145,7 +145,7 @@ xscale <- seq(1950, 2000, 10)
 graph_data %>% 
   filter(gwf_regimetype != 'NA') %>% 
   filter(gwf_regimetype %in% exclude_regime == FALSE) %>% 
-  ggplot()+ geom_line(aes(x=startyear,y=n,linetype=fct_reorder(gwf_regimetype,n*(-1)))) + 
+  ggplot()+ geom_line(aes(x=year,y=n,linetype=fct_reorder(gwf_regimetype,n*(-1)))) + 
   xlab('Year') + ylab('Sanctions Threats') +
   scale_linetype(name='Regime Type')+
   scale_x_continuous(breaks = xscale, labels=xscale)+
