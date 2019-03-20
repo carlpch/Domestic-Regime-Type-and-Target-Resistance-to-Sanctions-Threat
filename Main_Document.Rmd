@@ -62,7 +62,8 @@ trim_weeks = function(weeks){
     weeks$pers_rat[i] <- weeks$pers_sum[i]/weeks$pers_total[i]
     }
   }
-  return(weeks)
+  
+  return(weeks %>% select(ccode,year,pers_total,pers_sum,pers_rat))
 }
 
 ```
