@@ -1,10 +1,4 @@
 <img width='80%' style='margin:0 auto;' src='sanctions-repo.png'/>
-# Domestic Regime Type and Target Resistance to Sanction Threat
-
-Author: 
-Carl Pi-Cheng Huang
-Department of Politics, University of Virginia
-ph9xn@virginia.edu
 
 ## Abstract
 
