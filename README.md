@@ -1,4 +1,4 @@
-<img src='sanctions-repo.png'/>
+<img width='50%' src='sanctions-repo.png'/>
 # Domestic Regime Type and Target Resistance to Sanction Threat
 
 Author: 
